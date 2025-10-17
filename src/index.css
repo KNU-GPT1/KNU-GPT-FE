@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* 기본 다크 테마 스타일 */
+/* 기본 테마 스타일 */
 * {
   box-sizing: border-box;
 }
@@ -9,8 +9,8 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background-color: #0c0b0d;
-  color: #ffffff;
+  background-color: #ffffff;
+  color: #222222;
   font-family: system-ui, -apple-system, sans-serif;
 }
 
