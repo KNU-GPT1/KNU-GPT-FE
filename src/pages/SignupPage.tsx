@@ -232,9 +232,9 @@ export default function BasicSignupForm() {
 
           <div className="self-stretch flex flex-col items-center gap-3">
             <div className="self-stretch text-center text-black text-[40px] font-medium font-['Pretendard'] leading-[56px]">회원가입</div>
-            <div className="self-stretch text-center text-[#505050] text-xl font-normal font-['Pretendard'] leading-7">
+            <div className="self-stretch text-center text-[#505050] text-l font-normal font-['Pretendard'] leading-7">
                 KNU GPT에서 무제한으로 채팅을 이용할 수 있습니다.
-                경북대학교 재학생 및 졸업생, 교직원만 이용 가능합니다.
+                <p>경북대학교 재학생 및 졸업생, 교직원만 이용 가능합니다.</p>
             </div>
           </div>
 
