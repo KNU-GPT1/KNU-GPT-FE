@@ -55,7 +55,7 @@ export default function LoginPage() {
 
           <div className="self-stretch flex flex-col items-center gap-3">
             <div className="self-stretch text-center text-black text-[40px] font-medium font-['Pretendard'] leading-[56px]">로그인</div>
-            <div className="self-stretch text-center text-[#505050] text-xl font-normal font-['Pretendard'] leading-7">
+            <div className="self-stretch text-center text-[#505050] text-l font-normal font-['Pretendard'] leading-7">
                 KNU GPT에서 무제한으로 채팅을 이용할 수 있습니다.
             </div>
           </div>

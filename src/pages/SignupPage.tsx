@@ -128,7 +128,7 @@ export default function BasicSignupForm() {
       setRemainingSec(180); // 코드 전송 성공 시 타이머 시작
       alert(`인증 코드가 ${formData.email}로 전송되었습니다.`);
     } catch (e) {
-      setErrors(prev => ({ ...prev, email: "코드 전송에 실패했습니다." }));
+      setErrors(prev => ({ ...prev, email: "학교 이메일만 사용이 가능합니다." }));
     } finally {
       setLoading(false);
     }
@@ -198,11 +198,19 @@ export default function BasicSignupForm() {
       console.error('회원가입 에러', e);
 
       const message = e && (e as any).message ? (e as any).message : '회원가입 처리 중 오류가 발생했습니다.';
-      setErrors(prev => ({ ...prev, general: message }));
+      alert(message);
     } finally {
       setLoading(false);
     }
   };
+
+  const showPassword = emailVerified;
+  const showName = showPassword && formData.password.length >= 8;
+  const showMajor = showName && formData.name.length > 0;
+  const showEnrollment = showMajor && formData.major.length > 0;
+  const showGPA = showEnrollment; // Enrollment has default value, so it's effectively "filled"
+  const showBio = showGPA; // GPA is optional
+  const showSubmit = showBio;
 
   return (
 
@@ -230,69 +238,68 @@ export default function BasicSignupForm() {
           </div>
 
 
-      <div className="self-stretch flex flex-col items-start gap-2">
-     
-
-
-
       <div className="signup-container">
       <form onSubmit={handleSubmit}>
-        {errors.general && <p className="error-message" style={{ marginBottom: '15px' }}>{errors.general}</p>}
         
         {/* 1. 이메일 주소 (인증 필요) */}
-        <fieldset className="form-field-group">
+        <fieldset className="form-field-group" style={{ border: 'none', padding: 0, margin: '0 0 15px 0' }}>
           <label htmlFor="email">이메일 주소:</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              disabled={emailVerified || loading}
-              placeholder="knu@knu.ac.kr"
-              required
-              className="signup-form-field"
-            />
-            {errors.email && <p className="error-message">{errors.email}</p>}
-            <div style={{ marginTop: "5px" }}></div>
-            <button 
-              type="button" 
-              onClick={onSendCode} 
-              disabled={loading || emailVerified}
-              className="form-button">
-              {loading ? '전송 중' : '코드 전송'}
-            </button>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            disabled={emailVerified || loading}
+            placeholder="knu@knu.ac.kr"
+            required
+            className="signup-form-field"
+          />
+          {errors.email && <p className="error-message">{errors.email}</p>}
+          <button 
+            type="button" 
+            onClick={onSendCode} 
+            disabled={loading || emailVerified}
+            className="form-button"
+            style={{ marginTop: '10px', width: '100%' }}>
+            {loading ? '전송 중' : '코드 전송'}
+          </button>
           
-          <label htmlFor="code" style={{ display: 'block', marginTop: '10px' }}>인증 코드:</label>
-          <div className="form-row">
-            <div className="input-wrapper signup-form-field">
-              <input
-                type="text"
-                id="code"
-                name="code"
-                value={formData.code}
-                onChange={handleChange}
-                disabled={emailVerified || !timerRunning || loading}
-                placeholder="6자리 인증 코드"
-                className="input-field-transparent"
-              />
-              <div className={`timer-display ${timerRunning ? 'running' : ''}`}>
-                  {emailVerified ? '인증 완료' : (timerRunning ? mmss : '대기')}
+          {(timerRunning || emailVerified) && (
+            <>
+              <label htmlFor="code" style={{ display: 'block', marginTop: '10px' }}>인증 코드:</label>
+              <div className="form-row">
+                <div className="input-wrapper signup-form-field">
+                  <input
+                    type="text"
+                    id="code"
+                    name="code"
+                    value={formData.code}
+                    onChange={handleChange}
+                    disabled={emailVerified || !timerRunning || loading}
+                    placeholder="6자리 인증 코드"
+                    className="input-field-transparent"
+                  />
+                  <div className={`timer-display ${timerRunning ? 'running' : ''}`}>
+                      {emailVerified ? '인증 완료' : (timerRunning ? mmss : '대기')}
+                  </div>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={onVerifyCode} 
+                  disabled={loading || emailVerified || !timerRunning}
+                  className="form-button"
+                >
+                  {emailVerified ? '인증됨' : '인증 확인'}
+                </button>
               </div>
-            </div>
-            <button 
-              type="button" 
-              onClick={onVerifyCode} 
-              disabled={loading || emailVerified || !timerRunning}
-              className="form-button"
-            >
-              {emailVerified ? '인증됨' : '인증 확인'}
-            </button>
-            {errors.code && <p className="error-message">{errors.code}</p>}
-          </div>
+              {errors.code && <p className="error-message">{errors.code}</p>}
+            </>
+          )}
         </fieldset>
 
         {/* 2. 비밀번호 */}
+        {showPassword && (
         <div className="form-field-group">
           <label htmlFor="password">비밀번호 (8자 이상):</label>
           <input
@@ -307,8 +314,10 @@ export default function BasicSignupForm() {
           />
           {errors.password && <p className="error-message">{errors.password}</p>}
         </div>
+        )}
 
         {/* 3. 이름 */}
+        {showName && (
         <div className="form-field-group">
           <label htmlFor="name">이름:</label>
           <input
@@ -323,8 +332,10 @@ export default function BasicSignupForm() {
           />
           {errors.name && <p className="error-message">{errors.name}</p>}
         </div>
+        )}
 
         {/* 4. 학과 */}
+        {showMajor && (
         <div className="form-field-group">
           <label htmlFor="major">학과:</label>
           <input
@@ -339,8 +350,10 @@ export default function BasicSignupForm() {
           />
           {errors.major && <p className="error-message">{errors.major}</p>}
         </div>
+        )}
 
         {/* 5. 재학 여부 */}
+        {showEnrollment && (
         <div className="form-field-group">
           <label htmlFor="enrollmentStatus">재학 여부:</label>
           <select
@@ -362,8 +375,10 @@ export default function BasicSignupForm() {
             <option value="기타">기타</option>
           </select>
         </div>
+        )}
 
         {/* 6. 학점 */}
+        {showGPA && (
         <div className="form-field-group">
           <label htmlFor="gpa">학점 (예: 4.5 만점에 4.0):</label>
           <input
@@ -380,8 +395,10 @@ export default function BasicSignupForm() {
             className="signup-form-field"
           />
         </div>
+        )}
 
         {/* 7. 자기소개 */}
+        {showBio && (
         <div className="form-field-group">
           <label htmlFor="bio">자기소개:</label>
           <textarea
@@ -394,8 +411,10 @@ export default function BasicSignupForm() {
             className="signup-form-field textarea"
           />
         </div>
+        )}
 
         {/* 최종 제출 버튼 */}
+        {showSubmit && (
         <button 
           type="submit" 
           disabled={loading || !emailVerified}
@@ -404,8 +423,8 @@ export default function BasicSignupForm() {
         >
           {loading ? '처리 중...' : '회원가입 완료'}
         </button>
+        )}
       </form>
-    </div>
     </div>
     </div>
     </div>
