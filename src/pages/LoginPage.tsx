@@ -2,23 +2,22 @@
 import { useState } from "react";
 import { login } from "../api/auth"; 
 import { useNavigate } from "react-router"; // 페이지 이동을 위해 추가
+import "./SignupPage.css";
 
 export default function LoginPage() {
   const navigate = useNavigate(); // 페이지 이동을 위한 훅
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async () => {
     if (!email || !password) {
-      setError("이메일과 비밀번호를 모두 입력하세요.");
+      alert("이메일과 비밀번호를 모두 입력하세요.");
       return;
     }
 
     try {
       setLoading(true);
-      setError(null);
       
       // 🌟 API 연결 부분 🌟
       await login({ email, password }); 
@@ -30,7 +29,7 @@ export default function LoginPage() {
       
     } catch (e: any) {
       // API 실패 처리
-      setError(e.message || "로그인 처리 중 알 수 없는 오류가 발생했습니다.");
+      alert(e.message || "로그인 처리 중 알 수 없는 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
@@ -50,7 +49,7 @@ export default function LoginPage() {
 
  
       <div className="flex-1 w-full flex justify-center items-center pt-[72px] pb-10">
-        <div className="w-[412px] flex flex-col items-start gap-10">
+        <div className="w-[412px] flex flex-col items-start gap-2">
 
 
           <div className="self-stretch flex flex-col items-center gap-3">
@@ -64,40 +63,29 @@ export default function LoginPage() {
           <div className="self-stretch flex flex-col items-start gap-5">
             
             {/* 이메일 */}
-            <div className="self-stretch flex flex-col items-start gap-2.5">
-              <div className="text-[#505050] text-xl font-normal font-['Pretendard'] leading-7">이메일 주소</div>
-              <div className="self-stretch h-[60px] px-7 py-4 rounded-[40px] border border-zinc-300 flex items-center">
+            <div className="signup-container">
+                <label htmlFor="email">이메일 :</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="이메일 주소"
-                  className="w-full outline-none bg-transparent text-[#222222] text-xl font-normal font-['Pretendard'] leading-7"
+                  className="signup-form-field"
                 />
-              </div>
             </div>
 
             {/* 비밀번호 */}
-            <div className="self-stretch flex flex-col items-start gap-2.5">
-              <div className="text-[#505050] text-xl font-normal font-['Pretendard'] leading-7">비밀번호</div>
-              <div className="self-stretch h-[60px] px-7 py-4 rounded-[40px] border border-zinc-300 flex items-center justify-between">
+            <div className="signup-container">
+                <label htmlFor="password">비밀번호 :</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="비밀번호"
-                  className="flex-1 outline-none bg-transparent text-[#222222] text-xl font-normal font-['Pretendard'] leading-7"
+                  className="signup-form-field"
                 />
                 {/* 비밀번호 숨김/표시 아이콘 영역 (실제 아이콘으로 대체 필요) */}
                 <div className="w-7 h-7" />
-              </div>
-            </div>
-            
-            {/* 에러 메시지 */}
-            <div className="h-[22px] w-full relative">
-              <div className="absolute left-0 top-0 text-sm font-normal font-['Pretendard'] leading-[22.4px]"
-                style={{ color: error ? '#DA2127' : 'transparent' }}
-              >{error || 'placeholder'}</div>
             </div>
           </div>
 
@@ -105,11 +93,8 @@ export default function LoginPage() {
           <button 
             onClick={onSubmit}
             disabled={loading}
-            className={`self-stretch px-7 py-4 rounded-[40px] flex justify-center items-center gap-2.5 transition ${
-              loading 
-                ? 'bg-red-600/70 cursor-not-allowed' 
-                : 'bg-red-600 hover:bg-red-700'
-            }`}
+            className="form-button"
+            style={{ width: '100%'}}
           >
             <div className="text-white text-xl font-semibold font-['Pretendard'] leading-7">
               {loading ? '로그인 중...' : '로그인하기'}
