@@ -205,14 +205,42 @@ export default function BasicSignupForm() {
   };
 
   return (
-    <div className="signup-container">
-      <h1>기본 회원가입</h1>
+
+
+    <div className="w-full min-h-screen bg-white flex flex-col items-center relative">
+      
+
+      <div className="w-full h-[72px] px-6 py-4 absolute top-0 left-0 flex items-center gap-2.5 bg-white ">
+        <div className="relative h-7 flex items-center gap-2">
+        <img src="/knu.svg" alt="KNU GPT Logo" className="w-5 h-5 shrink-0" />
+          <div className="text-[#222222] text-xl font-normal font-['KNU_TRUTH']">KNU GPT</div>
+        </div>
+      </div>
+
+         <div className="flex-1 w-full flex justify-center items-center pt-[72px] pb-10">
+        <div className="w-[412px] flex flex-col items-start gap-10">
+
+
+          <div className="self-stretch flex flex-col items-center gap-3">
+            <div className="self-stretch text-center text-black text-[40px] font-medium font-['Pretendard'] leading-[56px]">회원가입</div>
+            <div className="self-stretch text-center text-[#505050] text-xl font-normal font-['Pretendard'] leading-7">
+                KNU GPT에서 무제한으로 채팅을 이용할 수 있습니다.
+                경북대학교 재학생 및 졸업생, 교직원만 이용 가능합니다.
+            </div>
+          </div>
+
+
+      <div className="self-stretch flex flex-col items-start gap-2">
+     
+
+
+
+      <div className="signup-container">
       <form onSubmit={handleSubmit}>
         {errors.general && <p className="error-message" style={{ marginBottom: '15px' }}>{errors.general}</p>}
         
         {/* 1. 이메일 주소 (인증 필요) */}
         <fieldset className="form-field-group">
-          <legend>이메일 인증</legend>
           <label htmlFor="email">이메일 주소:</label>
             <input
               type="email"
@@ -377,6 +405,10 @@ export default function BasicSignupForm() {
           {loading ? '처리 중...' : '회원가입 완료'}
         </button>
       </form>
+    </div>
+    </div>
+    </div>
+    </div>
     </div>
   );
 }
