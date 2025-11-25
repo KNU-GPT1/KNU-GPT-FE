@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Design Test Files
+src/pages/DesignTestPage.tsx
+src/pages/Aurora.tsx
+src/pages/Aurora.css
+
+
