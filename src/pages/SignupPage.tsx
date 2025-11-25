@@ -3,6 +3,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 
 import { sendVerificationCode, verifyCode, register } from '../api/auth';
 import "./SignupPage.css";
+import AnimatedContent from './AnimatedContent';
 
 
 interface FormData {
@@ -267,6 +268,7 @@ export default function BasicSignupForm() {
           
           {(timerRunning || emailVerified) && (
             <>
+            <AnimatedContent>
               <label htmlFor="code" style={{ display: 'block', marginTop: '10px' }}>인증 코드:</label>
               <div className="form-row">
                 <div className="input-wrapper signup-form-field">
@@ -294,135 +296,150 @@ export default function BasicSignupForm() {
                 </button>
               </div>
               {errors.code && <p className="error-message">{errors.code}</p>}
+              </AnimatedContent>
             </>
           )}
         </fieldset>
 
         {/* 2. 비밀번호 */}
         {showPassword && (
-        <div className="form-field-group">
-          <label htmlFor="password">비밀번호 (8자 이상):</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="비밀번호"
-            required
-            className="signup-form-field"
-          />
-          {errors.password && <p className="error-message">{errors.password}</p>}
-        </div>
+        <AnimatedContent>
+          <div className="form-field-group">
+            <label htmlFor="password">비밀번호 (8자 이상):</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="비밀번호"
+              required
+              className="signup-form-field"
+            />
+            {errors.password && <p className="error-message">{errors.password}</p>}
+          </div>
+        </AnimatedContent>
         )}
 
         {/* 3. 이름 */}
         {showName && (
-        <div className="form-field-group">
-          <label htmlFor="name">이름:</label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="실명"
-            required
-            className="signup-form-field"
-          />
-          {errors.name && <p className="error-message">{errors.name}</p>}
-        </div>
+        <AnimatedContent>
+          <div className="form-field-group">
+            <label htmlFor="name">이름:</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="실명"
+              required
+              className="signup-form-field"
+            />
+            {errors.name && <p className="error-message">{errors.name}</p>}
+          </div>
+        </AnimatedContent>
         )}
 
         {/* 4. 학과 */}
         {showMajor && (
-        <div className="form-field-group">
-          <label htmlFor="major">학과:</label>
-          <input
-            type="text"
-            id="major"
-            name="major"
-            value={formData.major}
-            onChange={handleChange}
-            placeholder="컴퓨터학부"
-            required
-            className="signup-form-field"
-          />
-          {errors.major && <p className="error-message">{errors.major}</p>}
-        </div>
+        <AnimatedContent>
+          <div className="form-field-group">
+            <label htmlFor="major">학과:</label>
+            <input
+              type="text"
+              id="major"
+              name="major"
+              value={formData.major}
+              onChange={handleChange}
+              placeholder="컴퓨터학부"
+              required
+              className="signup-form-field"
+            />
+            {errors.major && <p className="error-message">{errors.major}</p>}
+          </div>
+        </AnimatedContent>
         )}
 
         {/* 5. 재학 여부 */}
         {showEnrollment && (
-        <div className="form-field-group">
-          <label htmlFor="enrollmentStatus">재학 여부:</label>
-          <select
-            id="enrollmentStatus"
-            name="enrollmentStatus"
-            value={formData.enrollmentStatus}
-            onChange={handleChange}
-            required
-            className="signup-form-field"
-          >
-            <option value="1학년">1학년</option>
-            <option value="2학년">2학년</option>
-            <option value="3학년">3학년</option>
-            <option value="4학년">4학년</option>
-            <option value="휴학 중">휴학 중</option>
-            <option value="초과 학기">초과 학기</option>
-            <option value="졸업유예">졸업유예</option>
-            <option value="교직원">교직원</option>
-            <option value="기타">기타</option>
-          </select>
-        </div>
+        <AnimatedContent>
+          <div className="form-field-group">
+            <label htmlFor="enrollmentStatus">재학 여부:</label>
+            <select
+              id="enrollmentStatus"
+              name="enrollmentStatus"
+              value={formData.enrollmentStatus}
+              onChange={handleChange}
+              required
+              className="signup-form-field"
+            >
+              <option value="1학년">1학년</option>
+              <option value="2학년">2학년</option>
+              <option value="3학년">3학년</option>
+              <option value="4학년">4학년</option>
+              <option value="휴학 중">휴학 중</option>
+              <option value="초과 학기">초과 학기</option>
+              <option value="졸업유예">졸업유예</option>
+              <option value="교직원">교직원</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+        </AnimatedContent>
         )}
 
         {/* 6. 학점 */}
         {showGPA && (
-        <div className="form-field-group">
-          <label htmlFor="gpa">학점 (예: 4.5 만점에 4.0):</label>
-          <input
-            type="number"
-            id="gpa"
-            name="gpa"
-            value={formData.gpa}
-            onChange={handleChange}
-            onBlur={handleGPABlur}
-            placeholder="0.0 ~ 4.5"
-            step="0.01"
-            min="0"
-            max="4.5"
-            className="signup-form-field"
-          />
-        </div>
+        <AnimatedContent>
+          <div className="form-field-group">
+            <label htmlFor="gpa">학점 (예: 4.5 만점에 4.0):</label>
+            <input
+              type="number"
+              id="gpa"
+              name="gpa"
+              value={formData.gpa}
+              onChange={handleChange}
+              onBlur={handleGPABlur}
+              placeholder="0.0 ~ 4.5"
+              step="0.01"
+              min="0"
+              max="4.5"
+              className="signup-form-field"
+            />
+          </div>
+        </AnimatedContent>
         )}
 
         {/* 7. 자기소개 */}
         {showBio && (
-        <div className="form-field-group">
-          <label htmlFor="bio">자기소개:</label>
-          <textarea
-            id="bio"
-            name="bio"
-            value={formData.bio}
-            onChange={handleChange}
-            rows={5}
-            placeholder="자유롭게 작성해 주세요."
-            className="signup-form-field textarea"
-          />
-        </div>
+        <AnimatedContent>
+          <div className="form-field-group">
+            <label htmlFor="bio">자기소개:</label>
+            <textarea
+              id="bio"
+              name="bio"
+              value={formData.bio}
+              onChange={handleChange}
+              rows={5}
+              placeholder="자유롭게 작성해 주세요."
+              className="signup-form-field textarea"
+            />
+          </div>
+        </AnimatedContent>
         )}
 
         {/* 최종 제출 버튼 */}
         {showSubmit && (
-        <button 
-          type="submit" 
-          disabled={loading || !emailVerified}
-          className="form-button"
-          style={{ width: '100%', marginTop: '20px' }}
-        >
-          {loading ? '처리 중...' : '회원가입 완료'}
-        </button>
+        <AnimatedContent>
+          <button 
+            type="submit" 
+            disabled={loading || !emailVerified}
+            className="form-button"
+            style={{ width: '100%', marginTop: '20px' }}
+          >
+            {loading ? '처리 중...' : '회원가입 완료'}
+          </button>
+        </AnimatedContent>
         )}
       </form>
     </div>
