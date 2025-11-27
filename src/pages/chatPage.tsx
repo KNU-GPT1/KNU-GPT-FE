@@ -3,9 +3,9 @@ import { LogOut, MoreVertical, Pencil, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { streamMemberChatResponse, getChatRooms, createChatRoom, updateChatRoomTitle, deleteChatRoom, getChatHistory } from '../utils/chatApi';
-import { saveChatSessions, loadChatSessions, saveActiveChatId, loadActiveChatId } from '../utils/chatStorage';
-import { getAuthToken } from '../utils/auth';
+import { streamMemberChatResponse, getChatRooms, createChatRoom, updateChatRoomTitle, deleteChatRoom, getChatHistory } from '../api/chatApi';
+import { saveChatSessions, loadChatSessions, saveActiveChatId, loadActiveChatId } from '../api/chatStorage';
+import { getAuthToken } from '../api/auth';
 import type { ChatSession, Message } from '../types/chat';
 
 // 사용자 아이콘 컴포넌트
