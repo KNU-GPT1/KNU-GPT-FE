@@ -1,6 +1,81 @@
 @import "tailwindcss";
 
-/* 기본 다크 테마 스타일 */
+
+/* Pretendard 폰트 정의 */
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 100;
+  font-style: normal;
+  src: url('/fonts/Pretendard-Thin.otf') format('opentype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 200;
+  font-style: normal;
+  src: url('/fonts/Pretendard-ExtraLight.otf') format('opentype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 300;
+  font-style: normal;
+  src: url('/fonts/Pretendard-Light.otf') format('opentype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 400;
+  font-style: normal;
+  src: url('/fonts/Pretendard-Regular.otf') format('opentype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 500;
+  font-style: normal;
+  src: url('/fonts/Pretendard-Medium.otf') format('opentype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 600;
+  font-style: normal;
+  src: url('/fonts/Pretendard-SemiBold.otf') format('opentype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 700;
+  font-style: normal;
+  src: url('/fonts/Pretendard-Bold.otf') format('opentype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 800;
+  font-style: normal;
+  src: url('/fonts/Pretendard-ExtraBold.otf') format('opentype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 900;
+  font-style: normal;
+  src: url('/fonts/Pretendard-Black.otf') format('opentype');
+  font-display: swap;
+}
+
+/* 기본 테마 스타일 */
+
 * {
   box-sizing: border-box;
 }
@@ -10,15 +85,15 @@ html, body {
   padding: 0;
   height: 100%;
   background-color: #ffffff;
-  color: #000000;
-  font-family: system-ui, -apple-system, sans-serif;
+
+  color: #222222;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+
 }
 
 #root {
   width: 100%;
   height: 100vh;
-  display: flex;
-  flex-direction: row;
 }
 
 /* 강제 레이아웃 설정 */
@@ -48,4 +123,117 @@ html, body {
 
 .w-\[280px\] {
   width: 280px !important;
+}
+
+/* Animation for slide up effect */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.4s ease-out forwards;
+}
+
+/* Markdown 스타일 */
+.prose {
+  color: inherit;
+}
+
+.prose p {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.prose h1 {
+  font-size: 1.5em;
+}
+
+.prose h2 {
+  font-size: 1.25em;
+}
+
+.prose h3 {
+  font-size: 1.125em;
+}
+
+.prose ul, .prose ol {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  padding-left: 1.5em;
+}
+
+.prose li {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.prose code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.125em 0.25em;
+  border-radius: 0.25em;
+  font-size: 0.875em;
+  font-family: monospace;
+}
+
+.prose pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 1em;
+  border-radius: 0.5em;
+  overflow-x: auto;
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+.prose pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.prose blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  margin-left: 0;
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+  color: #6b7280;
+}
+
+.prose a {
+  color: #DA2127;
+  text-decoration: underline;
+}
+
+.prose a:hover {
+  color: #c01d23;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+.prose th, .prose td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5em;
+  text-align: left;
+}
+
+.prose th {
+  background-color: #f9fafb;
+  font-weight: 600;
 }

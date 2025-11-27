@@ -8,8 +8,7 @@ const Chat = lazy(() => import("../pages/chatPage"))
 const Signup = lazy(() => import("../pages/SignupPage"))
 const Login = lazy(() => import("../pages/LoginPage"))
 const DesignTest = lazy(() => import("../pages/DesignTestPage"))
-
-
+const GuestPage = lazy(() => import("../pages/guestPage"))
 
 const router = createBrowserRouter([
   {
@@ -17,6 +16,14 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
+        element: (
+          <Suspense fallback={<Loading />}>
+            <GuestPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "chat",
         element: (
           <Suspense fallback={<Loading />}>
             <Chat />
