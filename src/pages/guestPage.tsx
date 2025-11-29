@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { streamGuestChatResponse } from '../api/chatApi';
+import { sendGuestMessage } from '../api/chatApi';
 
 interface Message {
   id: string;
@@ -450,48 +450,29 @@ export default function GuestPage() {
     // Increment guest conversation count on each message send
     setGuestConversationCount(prev => prev + 1);
 
-    // 스트리밍 응답을 위한 메시지 ID 생성
-    const assistantMessageId = (Date.now() + 1).toString();
-    streamingMessageIdRef.current = assistantMessageId;
-    streamingMessageRef.current = "";
-
-    // 빈 응답 메시지 추가
-    setMessages(prev => [...prev, {
-      id: assistantMessageId,
-      text: "",
-      isUser: false,
-      timestamp: new Date(),
-    }]);
-
-    // 비회원 채팅 API 호출 (SSE 스트리밍)
-    await streamGuestChatResponse(
-      textToSend,
-      (chunk: string) => {
-        // 스트리밍 중인 메시지에 청크 추가
-        if (streamingMessageIdRef.current === assistantMessageId) {
-          streamingMessageRef.current += chunk;
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === assistantMessageId 
-                ? { ...msg, text: streamingMessageRef.current }
-                : msg
-            )
-          );
-        }
-      },
-      () => {
-        // 스트리밍 완료
-        setIsTyping(false);
-        streamingMessageIdRef.current = null;
-        streamingMessageRef.current = "";
-      },
-      (error: Error) => {
-        // 에러 처리
-        console.error('Chat error:', error);
-        setIsTyping(false);
-        
-        // 404 오류인 경우 특별한 메시지 표시
-        let errorMessage = '오류가 발생했습니다. 다시 시도해주세요.';
+    // 비회원 채팅 API 호출
+    try {
+      const response = await sendGuestMessage(textToSend);
+      const answer = response.data?.answer || '';
+      
+      // 챗봇 응답 메시지 추가
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: answer,
+        isUser: false,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsTyping(false);
+    } catch (error) {
+      // 에러 처리
+      console.error('Chat error:', error);
+      setIsTyping(false);
+      
+      // 에러 메시지 생성
+      let errorMessage = '오류가 발생했습니다. 다시 시도해주세요.';
+      if (error instanceof Error) {
         if (error.message.includes('404')) {
           errorMessage = '채팅 서비스를 준비 중입니다. 잠시 후 다시 시도해주세요.';
         } else if (error.message.includes('403') || error.message.includes('401')) {
@@ -499,18 +480,18 @@ export default function GuestPage() {
         } else if (error.message.includes('500')) {
           errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
         }
-        
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === assistantMessageId 
-              ? { ...msg, text: msg.text || errorMessage }
-              : msg
-          )
-        );
-        streamingMessageIdRef.current = null;
-        streamingMessageRef.current = "";
       }
-    );
+      
+      // 에러 메시지 추가
+      const errorMessageObj: Message = {
+        id: (Date.now() + 1).toString(),
+        text: errorMessage,
+        isUser: false,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorMessageObj]);
+    }
   };
 
   const handleSuggestionClick = (question: string) => {

@@ -3,10 +3,8 @@ import { LogOut, MoreVertical, Pencil, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { streamMemberChatResponse, getChatRooms, createChatRoom, updateChatRoomTitle, deleteChatRoom, getChatHistory } from '../api/chatApi';
-import { saveChatSessions, loadChatSessions, saveActiveChatId, loadActiveChatId } from '../api/chatStorage';
-import { getAuthToken } from '../api/auth';
-import type { ChatSession, Message } from '../types/chat';
+import { getChatRooms, createChatRoom, sendMessage, getChatHistory, updateChatRoomTitle, deleteChatRoom } from '../api/chatApi';
+import type { ChatRoom, ChatMessage } from '../types/chat';
 
 // 사용자 아이콘 컴포넌트
 function UserIcon({ className }: { className?: string }) {
@@ -179,7 +177,7 @@ function ChatItem({
                   onCancelRename?.();
                 }
               }}
-              onBlur={(e) => {
+              onBlur={() => {
                 // 메뉴 클릭으로 인한 blur가 아니면 저장
                 if (!isMenuClickRef.current) {
                   onSaveRename?.();
@@ -263,151 +261,66 @@ export default function Chat() {
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const headerMenuRef = useRef<HTMLDivElement>(null);
   
-  // 채팅방 목록 상태
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  // 채팅방 목록 상태 (새로운 타입 사용)
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [isLoadingChatRooms, setIsLoadingChatRooms] = useState(true);
   
-  // 서버에서 채팅방 목록 로드
-  useEffect(() => {
-    const loadChatRoomsFromServer = async () => {
-      const token = getAuthToken();
-      if (!token) {
-        // 토큰이 없으면 localStorage에서 로드
-        const loaded = loadChatSessions();
-        if (loaded.length > 0) {
-          setChatSessions(loaded);
-        } else {
-          const newChat: ChatSession = {
-            id: Date.now().toString(),
-            name: '새 채팅',
-            messages: [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          setChatSessions([newChat]);
-        }
-        setIsLoadingChatRooms(false);
-        return;
-      }
-
-      try {
-        const rooms = await getChatRooms(token);
-        if (rooms.length > 0) {
-          // 서버에서 받은 채팅방을 ChatSession 형식으로 변환
-          const sessions: ChatSession[] = await Promise.all(
-            rooms.map(async (room: any) => {
-              // 각 채팅방의 채팅 내역도 가져오기
-              try {
-                const chats = await getChatHistory(room.id, token);
-                return {
-                  id: room.id.toString(),
-                  name: room.title || room.name || '새 채팅',
-                  messages: chats.map((chat: any, index: number) => ({
-                    id: chat.id?.toString() || `${room.id}-${index}`,
-                    text: chat.content || chat.message || '',
-                    isUser: chat.role === 'user' || chat.sender === 'user',
-                    timestamp: chat.timestamp ? new Date(chat.timestamp) : new Date(),
-                  })),
-                  createdAt: room.createdAt ? new Date(room.createdAt) : new Date(),
-                  updatedAt: room.updatedAt ? new Date(room.updatedAt) : new Date(),
-                };
-              } catch (error) {
-                console.error(`Failed to load chat history for room ${room.id}:`, error);
-                return {
-                  id: room.id.toString(),
-                  name: room.title || room.name || '새 채팅',
-                  messages: [],
-                  createdAt: room.createdAt ? new Date(room.createdAt) : new Date(),
-                  updatedAt: room.updatedAt ? new Date(room.updatedAt) : new Date(),
-                };
-              }
-            })
-          );
-          setChatSessions(sessions);
-        } else {
-          // 채팅방이 없으면 새 채팅 생성
-          const newChat: ChatSession = {
-            id: Date.now().toString(),
-            name: '새 채팅',
-            messages: [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          setChatSessions([newChat]);
-        }
-      } catch (error) {
-        console.error('Failed to load chat rooms:', error);
-        // 에러 발생 시 localStorage에서 로드
-        const loaded = loadChatSessions();
-        if (loaded.length > 0) {
-          setChatSessions(loaded);
-        } else {
-          const newChat: ChatSession = {
-            id: Date.now().toString(),
-            name: '새 채팅',
-            messages: [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          setChatSessions([newChat]);
-        }
-      } finally {
-        setIsLoadingChatRooms(false);
-      }
-    };
-
-    loadChatRoomsFromServer();
-  }, []);
+  // 현재 활성 채팅방 ID (null이면 초기 화면)
+  const [activeChatId, setActiveChatId] = useState<string | number | null>(null);
   
-  const [activeChatId, setActiveChatId] = useState<string>('');
+  // 현재 활성 채팅방의 메시지들
+  const [currentMessages, setCurrentMessages] = useState<ChatMessage[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   
-  // 채팅방 목록이 로드되면 activeChatId 설정
-  useEffect(() => {
-    if (chatSessions.length > 0 && !activeChatId) {
-      const saved = loadActiveChatId();
-      if (saved && chatSessions.find(s => s.id === saved)) {
-        setActiveChatId(saved);
-      } else {
-        setActiveChatId(chatSessions[0].id);
-      }
+  // 채팅방 목록 로드
+  const loadChatRooms = async () => {
+    try {
+      setIsLoadingChatRooms(true);
+      const response = await getChatRooms(0, 50); // 첫 페이지, 최대 50개
+      setChatRooms(response.data?.chat_rooms || []);
+    } catch (error) {
+      console.error('Failed to load chat rooms:', error);
+      setChatRooms([]);
+    } finally {
+      setIsLoadingChatRooms(false);
     }
-  }, [chatSessions, activeChatId]);
+  };
+  
+  // 초기 화면: 채팅방 목록 로드
+  useEffect(() => {
+    loadChatRooms();
+  }, []);
   
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingChatName, setEditingChatName] = useState("");
   const [showUserModal, setShowUserModal] = useState(false);
-  const streamingMessageRef = useRef<string>("");
-  const streamingMessageIdRef = useRef<string | null>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
   
-  // 채팅 세션이 변경될 때마다 localStorage에 저장
-  useEffect(() => {
-    saveChatSessions(chatSessions);
-  }, [chatSessions]);
-  
-  // 활성 채팅 ID가 변경될 때마다 저장
-  useEffect(() => {
-    if (activeChatId) {
-      saveActiveChatId(activeChatId);
+  // 채팅방 클릭 시: 채팅 내역 로드
+  // string | number를 number로 변환하는 헬퍼 함수
+  const toNumber = (id: string | number): number => {
+    return typeof id === 'string' ? parseInt(id, 10) : id;
+  };
+
+  const loadChatHistory = async (chatRoomId: string | number) => {
+    try {
+      setIsLoadingMessages(true);
+      const response = await getChatHistory(toNumber(chatRoomId), 0, 100); // 최신 100개 메시지
+      // 최신 메시지가 아래에 오도록 정렬 (createdAt 기준 오름차순)
+      const sortedMessages = [...(response.data?.chats || [])].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateA - dateB;
+      });
+      setCurrentMessages(sortedMessages);
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+      setCurrentMessages([]);
+    } finally {
+      setIsLoadingMessages(false);
     }
-  }, [activeChatId]);
-  
-  // 브라우저 종료 시 현재 채팅 저장
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      saveChatSessions(chatSessions);
-      saveActiveChatId(activeChatId);
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      // 컴포넌트 언마운트 시에도 저장
-      saveChatSessions(chatSessions);
-      saveActiveChatId(activeChatId);
-    };
-  }, [chatSessions, activeChatId]);
-  
+  };
+
   const [savedUserInfo, setSavedUserInfo] = useState<UserInfo>({
     name: "",
     department: "컴퓨터학부",
@@ -428,8 +341,7 @@ export default function Chat() {
     additionalInfo: "",
   });
 
-  // 현재 활성 채팅의 메시지 가져오기
-  const currentMessages = chatSessions.find(chat => chat.id === activeChatId)?.messages || [];
+  // currentMessages는 이미 상태로 관리됨
 
   // 메시지가 추가되면 스크롤을 맨 아래로
   useEffect(() => {
@@ -468,162 +380,6 @@ export default function Chat() {
     "우리 학과의 졸업 요건이 궁금해요.",
   ];
 
-  const handleSendMessage = async (messageText?: string) => {
-    const textToSend = messageText || inputMessage;
-    if (!textToSend.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: textToSend,
-      isUser: true,
-      timestamp: new Date(),
-    };
-
-    // 현재 활성 채팅에 메시지 추가
-    setChatSessions(prev => 
-      prev.map(chat => 
-        chat.id === activeChatId 
-          ? { ...chat, messages: [...chat.messages, userMessage], updatedAt: new Date() }
-          : chat
-      )
-    );
-    
-    setInputMessage("");
-    setIsTyping(true);
-
-    // 스트리밍 응답을 위한 메시지 ID 생성
-    const assistantMessageId = (Date.now() + 1).toString();
-    streamingMessageIdRef.current = assistantMessageId;
-    streamingMessageRef.current = "";
-
-    // 빈 응답 메시지 추가
-    setChatSessions(prev => 
-      prev.map(chat => 
-        chat.id === activeChatId 
-          ? { 
-              ...chat, 
-              messages: [...chat.messages, {
-                id: assistantMessageId,
-                text: "",
-        isUser: false,
-        timestamp: new Date(),
-              }],
-              updatedAt: new Date(),
-            }
-          : chat
-      )
-    );
-      
-    // 회원 채팅 API 호출
-    const token = getAuthToken();
-    if (token) {
-      // 타임아웃 설정 (30초)
-      const timeoutId = setTimeout(() => {
-        if (streamingMessageIdRef.current === assistantMessageId) {
-          console.warn('Chat response timeout');
-          setIsTyping(false);
-          setChatSessions(prev => 
-            prev.map(chat => 
-              chat.id === activeChatId 
-                ? { 
-                    ...chat, 
-                    messages: chat.messages.map(msg => 
-                      msg.id === assistantMessageId 
-                        ? { ...msg, text: msg.text || '응답 시간이 초과되었습니다. 다시 시도해주세요.' }
-                        : msg
-                    ),
-                    updatedAt: new Date(),
-                  }
-                : chat
-            )
-          );
-          streamingMessageIdRef.current = null;
-          streamingMessageRef.current = "";
-        }
-      }, 30000);
-      
-      // 회원인 경우: 서버 API 사용
-      await streamMemberChatResponse(
-        activeChatId,
-        textToSend,
-        (chunk: string) => {
-          // 타임아웃 취소
-          clearTimeout(timeoutId);
-          
-          // 스트리밍 중인 메시지에 청크 추가
-          if (streamingMessageIdRef.current === assistantMessageId) {
-            streamingMessageRef.current += chunk;
-            setChatSessions(prev => 
-              prev.map(chat => 
-                chat.id === activeChatId 
-                  ? { 
-                      ...chat, 
-                      messages: chat.messages.map(msg => 
-                        msg.id === assistantMessageId 
-                          ? { ...msg, text: streamingMessageRef.current }
-                          : msg
-                      ),
-                      updatedAt: new Date(),
-                    }
-                  : chat
-              )
-            );
-          }
-        },
-        () => {
-          // 타임아웃 취소
-          clearTimeout(timeoutId);
-          
-          // 스트리밍 완료
-          setIsTyping(false);
-          streamingMessageIdRef.current = null;
-          streamingMessageRef.current = "";
-        },
-        (error: Error) => {
-          // 타임아웃 취소
-          clearTimeout(timeoutId);
-          
-          // 에러 처리
-          console.error('Chat error:', error);
-          setIsTyping(false);
-          // 404 오류인 경우 특별한 메시지 표시
-          let errorMessage = '오류가 발생했습니다. 다시 시도해주세요.';
-          if (error.message.includes('404')) {
-            errorMessage = '채팅 서비스를 준비 중입니다. 잠시 후 다시 시도해주세요.';
-          } else if (error.message.includes('403') || error.message.includes('401')) {
-            errorMessage = '인증 오류가 발생했습니다.';
-          } else if (error.message.includes('500')) {
-            errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
-          }
-          
-      setChatSessions(prev => 
-        prev.map(chat => 
-          chat.id === activeChatId 
-                ? { 
-                    ...chat, 
-                    messages: chat.messages.map(msg => 
-                      msg.id === assistantMessageId 
-                        ? { ...msg, text: msg.text || errorMessage }
-                        : msg
-                    ),
-                    updatedAt: new Date(),
-                  }
-            : chat
-        )
-          );
-          streamingMessageIdRef.current = null;
-          streamingMessageRef.current = "";
-        },
-        token
-      );
-    } else {
-      // 비회원인 경우 (로컬만 사용)
-      setIsTyping(false);
-      streamingMessageIdRef.current = null;
-      streamingMessageRef.current = "";
-    }
-  };
-
   const handleSuggestionClick = (question: string) => {
     handleSendMessage(question);
   };
@@ -632,150 +388,6 @@ export default function Chat() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
-    }
-  };
-
-  const handleRenameChat = (chatId: string, currentName: string) => {
-    setEditingChatId(chatId);
-    setEditingChatName(currentName);
-  };
-
-  const handleSaveRename = async (chatId: string) => {
-    // 이미 편집 모드가 아니면 무시
-    if (editingChatId !== chatId) {
-      return;
-    }
-
-    const currentChat = chatSessions.find(c => c.id === chatId);
-    const nameToSave = (editingChatName || "").trim();
-    
-    // 빈 값이면 원래 이름 유지, 값이 있으면 저장
-    if (nameToSave && nameToSave !== currentChat?.name) {
-      setChatSessions(prev => 
-        prev.map(chat => 
-          chat.id === chatId ? { ...chat, name: nameToSave } : chat
-        )
-      );
-      
-      // 서버에 채팅방 제목 업데이트
-      const token = getAuthToken();
-      if (token) {
-        try {
-          await updateChatRoomTitle(chatId, nameToSave, token);
-        } catch (error) {
-          console.error('Failed to update chat room title:', error);
-        }
-      }
-    }
-    
-    // 편집 모드 종료 (상태 초기화)
-    setEditingChatId(null);
-    setEditingChatName("");
-  };
-
-  const handleDeleteChat = async (chatId: string) => {
-    if (chatSessions.length === 1) {
-      // 마지막 채팅방이면 메시지만 삭제
-      setChatSessions(prev => prev.map(chat => chat.id === chatId ? { ...chat, messages: [] } : chat));
-      
-      // 서버에서도 삭제 시도
-      const token = getAuthToken();
-      if (token) {
-        try {
-          await deleteChatRoom(chatId, token);
-        } catch (error) {
-          console.error('Failed to delete chat room:', error);
-        }
-      }
-      return;
-    }
-
-    // 서버에서 채팅방 삭제
-    const token = getAuthToken();
-    if (token) {
-      try {
-        await deleteChatRoom(chatId, token);
-      } catch (error) {
-        console.error('Failed to delete chat room:', error);
-      }
-    }
-
-    const updatedChats = chatSessions.filter(chat => chat.id !== chatId);
-    setChatSessions(updatedChats);
-
-    if (activeChatId === chatId) {
-      setActiveChatId(updatedChats.length > 0 ? updatedChats[0].id : '');
-    }
-  };
-
-  const handleNewChat = async () => {
-    // 현재 활성 채팅이 메시지가 있으면 저장 (이미 useEffect에서 자동 저장되지만 명시적으로)
-    const currentChat = chatSessions.find(chat => chat.id === activeChatId);
-    if (currentChat && currentChat.messages.length > 0) {
-      // 채팅 이름이 기본값이면 첫 메시지로 이름 설정
-      if (currentChat.name === '새 채팅' || currentChat.name.startsWith('채팅 ')) {
-        const firstUserMessage = currentChat.messages.find(msg => msg.isUser);
-        if (firstUserMessage) {
-          const newName = firstUserMessage.text.slice(0, 30) + (firstUserMessage.text.length > 30 ? '...' : '');
-          setChatSessions(prev => 
-            prev.map(chat => 
-              chat.id === activeChatId ? { ...chat, name: newName } : chat
-            )
-          );
-          
-          // 서버에 채팅방 제목 업데이트
-          const token = getAuthToken();
-          if (token) {
-            try {
-              await updateChatRoomTitle(activeChatId, newName, token);
-            } catch (error) {
-              console.error('Failed to update chat room title:', error);
-    }
-          }
-        }
-      }
-    }
-    
-    // 새 채팅방 생성
-    const token = getAuthToken();
-    if (token) {
-      try {
-        const newRoom = await createChatRoom(token, '새 채팅');
-        const newChat: ChatSession = {
-          id: newRoom.id?.toString() || Date.now().toString(),
-          name: newRoom.title || newRoom.name || '새 채팅',
-          messages: [],
-          createdAt: newRoom.createdAt ? new Date(newRoom.createdAt) : new Date(),
-          updatedAt: newRoom.updatedAt ? new Date(newRoom.updatedAt) : new Date(),
-        };
-        setChatSessions(prev => [...prev, newChat]);
-        setActiveChatId(newChat.id);
-      } catch (error) {
-        console.error('Failed to create chat room:', error);
-        // 에러 발생 시 로컬에만 생성
-        const newChatId = Date.now().toString();
-        const newChat: ChatSession = {
-          id: newChatId,
-          name: '새 채팅',
-          messages: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        setChatSessions(prev => [...prev, newChat]);
-        setActiveChatId(newChatId);
-      }
-    } else {
-      // 비회원인 경우 로컬에만 생성
-      const newChatId = Date.now().toString();
-    const newChat: ChatSession = {
-      id: newChatId,
-        name: '새 채팅',
-        messages: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    };
-    setChatSessions(prev => [...prev, newChat]);
-    setActiveChatId(newChatId);
     }
   };
 
@@ -795,6 +407,159 @@ export default function Chat() {
       return;
     }
     setShowUserModal(false);
+  };
+
+  const handleSendMessage = async (messageText?: string) => {
+    const textToSend = messageText || inputMessage;
+    if (!textToSend.trim()) return;
+
+    // 낙관적 업데이트: 사용자 메시지를 즉시 추가
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      type: 'USER',
+      content: textToSend,
+      createdAt: new Date().toISOString(),
+    };
+    setCurrentMessages(prev => [...prev, userMessage]);
+    
+    setInputMessage("");
+    setIsTyping(true);
+
+    try {
+      let chatRoomId: string | number;
+      let isNewRoom = false;
+      
+      // activeChatId가 없으면 채팅방 생성
+      if (!activeChatId) {
+        const createResponse = await createChatRoom(textToSend);
+        chatRoomId = createResponse.data?.chat_room_id;
+        isNewRoom = true;
+      } else {
+        chatRoomId = activeChatId;
+      }
+
+      // 메시지 전송
+      const sendResponse = await sendMessage(toNumber(chatRoomId), textToSend);
+      
+      // 챗봇 응답 추가 (먼저 메시지를 화면에 표시)
+      const botMessage: ChatMessage = {
+        id: `bot-${Date.now()}`,
+        type: 'CHAT_BOT',
+        content: sendResponse.data?.answer || '',
+        createdAt: new Date().toISOString(),
+      };
+      setCurrentMessages(prev => [...prev, botMessage]);
+      
+      // ★ 중요: 새 방인 경우 ID만 설정하고, 내역 조회(loadChatHistory)는 호출하지 않음
+      // 답변을 화면에 수동으로 추가했으므로, 서버에서 다시 불러올 필요가 없음
+      if (isNewRoom) {
+        setActiveChatId(chatRoomId);
+        // loadChatHistory는 호출하지 않음! (메시지가 사라지는 것을 방지)
+      }
+      
+      // 채팅방 목록 갱신 (마지막 메시지 업데이트)
+      await loadChatRooms();
+    } catch (error: any) {
+      console.error('Chat error:', error);
+      // 에러 메시지 추가
+      let errorMessage = '오류가 발생했습니다. 다시 시도해주세요.';
+      if (error.response?.status === 404) {
+        errorMessage = '채팅 서비스를 준비 중입니다. 잠시 후 다시 시도해주세요.';
+      } else if (error.response?.status === 401 || error.response?.status === 403) {
+        errorMessage = '인증 오류가 발생했습니다.';
+      } else if (error.response?.status === 500) {
+        errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      }
+      
+      const errorBotMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        type: 'CHAT_BOT',
+        content: errorMessage,
+        createdAt: new Date().toISOString(),
+      };
+      setCurrentMessages(prev => [...prev, errorBotMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleRenameChat = (chatId: string | number, currentName: string) => {
+    setEditingChatId(chatId.toString());
+    setEditingChatName(currentName);
+  };
+
+  const handleSaveRename = async (chatId: string | number) => {
+    // 이미 편집 모드가 아니면 무시
+    if (editingChatId !== chatId.toString()) {
+      return;
+    }
+
+    const nameToSave = (editingChatName || "").trim();
+    
+    // 빈 값이면 편집 취소
+    if (!nameToSave) {
+      setEditingChatId(null);
+      setEditingChatName("");
+      return;
+    }
+    
+    try {
+      // 서버에 채팅방 제목 업데이트
+      await updateChatRoomTitle(toNumber(chatId), nameToSave);
+      
+      // 로컬 상태 업데이트
+      setChatRooms(prev => 
+        prev.map(room => 
+          room.id === chatId ? { ...room, title: nameToSave } : room
+        )
+      );
+      
+      // 편집 모드 종료
+      setEditingChatId(null);
+      setEditingChatName("");
+      
+      // 목록 갱신
+      await loadChatRooms();
+    } catch (error) {
+      console.error('Failed to update chat room title:', error);
+    }
+  };
+
+  const handleDeleteChat = async (chatId: string | number) => {
+    try {
+      // 서버에서 채팅방 삭제
+      await deleteChatRoom(toNumber(chatId));
+      
+      // 로컬 상태에서 제거
+      setChatRooms(prev => prev.filter(room => room.id !== chatId));
+      
+      // 현재 활성 채팅방이 삭제된 경우 초기 화면으로
+      if (activeChatId === chatId) {
+        setActiveChatId(null);
+        setCurrentMessages([]);
+      }
+      
+      // 목록 갱신
+      await loadChatRooms();
+    } catch (error) {
+      console.error('Failed to delete chat room:', error);
+    }
+  };
+  
+  // 채팅방 선택 핸들러
+  // 채팅방을 클릭했을 때만 내역을 불러옴
+  const handleSelectChatRoom = async (chatRoomId: string | number) => {
+    setActiveChatId(chatRoomId);
+    await loadChatHistory(chatRoomId); // 클릭했을 때만 내역 불러오기!
+  };
+
+  const handleNewChat = async () => {
+    // 현재 선택된 방 ID를 null로 초기화하고 초기 화면으로 돌아가기
+    setActiveChatId(null);
+    setCurrentMessages([]);
+    
+    // 채팅방 목록 갱신
+    await loadChatRooms();
   };
 
   return (
@@ -848,25 +613,31 @@ export default function Chat() {
 
           {/* Chat History */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
-        {chatSessions.map((chat) => (
-              <div key={chat.id} className="relative">
-          <ChatItem
-            label={chat.name}
-            active={activeChatId === chat.id}
-                  onRename={() => handleRenameChat(chat.id, chat.name)}
-            onDelete={() => handleDeleteChat(chat.id)}
-            onSelect={() => setActiveChatId(chat.id)}
-                  isEditing={editingChatId === chat.id}
-                  editingName={editingChatName}
-                  onEditingNameChange={setEditingChatName}
-                  onSaveRename={() => handleSaveRename(chat.id)}
-                  onCancelRename={() => {
-                    setEditingChatId(null);
-                    setEditingChatName("");
-                  }}
-          />
-              </div>
-        ))}
+        {isLoadingChatRooms ? (
+          <div className="p-4 text-center text-gray-500">로딩 중...</div>
+        ) : chatRooms.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">채팅방이 없습니다</div>
+        ) : (
+          chatRooms.map((room) => (
+            <div key={room.id} className="relative">
+              <ChatItem
+                label={room.title}
+                active={activeChatId === room.id}
+                onRename={() => handleRenameChat(room.id, room.title)}
+                onDelete={() => handleDeleteChat(room.id)}
+                onSelect={() => handleSelectChatRoom(room.id)}
+                isEditing={editingChatId === room.id.toString()}
+                editingName={editingChatName}
+                onEditingNameChange={setEditingChatName}
+                onSaveRename={() => handleSaveRename(room.id)}
+                onCancelRename={() => {
+                  setEditingChatId(null);
+                  setEditingChatName("");
+                }}
+              />
+            </div>
+          ))
+        )}
       </div>
 
           <div className="p-2">
@@ -959,7 +730,7 @@ export default function Chat() {
 
         {/* Chat Area */}
         <div ref={chatAreaRef} className="flex-1 overflow-y-auto p-6 space-y-6">
-        {currentMessages.length === 0 ? (
+        {!activeChatId || currentMessages.length === 0 ? (
             <div className="space-y-[54px] max-w-[840px] mx-auto">
               <div className="flex flex-col gap-[6px] items-start">
                 <h1 className="font-Pretendard font-semibold text-[#222222] text-[32px] tracking-[-0.8px] w-full">안녕하세요, KNU GPT 입니다!</h1>
@@ -982,46 +753,33 @@ export default function Chat() {
           </div>
         ) : (
             <div className="space-y-6">
-              {currentMessages.map((message) => (
-                <div key={message.id}>
-                  {message.isUser ? (
-                    <div className="flex justify-end max-w-[840px] mx-auto">
-                      <div className="bg-[#FFF0F0] rounded-2xl px-4 py-3 max-w-[70%]">
-                        <p className="text-base font-Pretendard">{message.text}</p>
+              {isLoadingMessages ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="text-gray-500">메시지를 불러오는 중...</div>
+                </div>
+              ) : (
+                currentMessages.map((message) => (
+                  <div key={message.id}>
+                    {message.type === 'USER' ? (
+                      <div className="flex justify-end max-w-[840px] mx-auto">
+                        <div className="bg-[#FFF0F0] rounded-2xl px-4 py-3 max-w-[70%]">
+                          <p className="text-base font-Pretendard">{message.content}</p>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex justify-start max-w-[840px] mx-auto">
-                      <div className="space-y-4 max-w-[80%]">
-                        {message.text ? (
+                    ) : (
+                      <div className="flex justify-start max-w-[840px] mx-auto">
+                        <div className="space-y-4 max-w-[80%]">
                           <div className="text-base text-gray-900 prose prose-base max-w-none font-Pretendard">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {message.text}
+                              {message.content}
                             </ReactMarkdown>
                           </div>
-                        ) : (
-                          <div className="text-base text-gray-500 italic font-Pretendard">응답을 기다리는 중...</div>
-                        )}
-                        {message.structured && (
-                          <div className="mt-6">
-                            <h3 className="font-bold text-base mb-4">{message.structured.title}</h3>
-                            <div className="space-y-4">
-                              {message.structured.items.map((item, idx) => (
-                                <div key={idx}>
-                                  <p className="font-semibold text-sm">
-                                    {item.number}. {item.title}
-                                  </p>
-                                  <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        </div>
                       </div>
+                    )}
                   </div>
-                  )}
-                </div>
-              ))}
+                ))
+              )}
               {isTyping && (
                 <div className="flex justify-start max-w-[840px] mx-auto">
                   <div className="max-w-[80%]">

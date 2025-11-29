@@ -179,6 +179,34 @@ export async function register(params: RegisterParams): Promise<void> {
   return;
 }
 
+export async function logout(): Promise<void> {
+  const token = getAuthToken();
+  if (!token) {
+    // 토큰이 없으면 바로 로그아웃 처리
+    removeAuthToken();
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      // 401 (Unauthorized) 등의 에러가 발생해도 클라이언트에서는 로그아웃 처리
+      console.error('Logout API call failed, but proceeding with local logout.');
+    }
+  } catch (error) {
+    console.error('An error occurred during logout:', error);
+  } finally {
+    // API 호출 성공 여부와 관계없이 항상 토큰을 제거
+    removeAuthToken();
+  }
+}
+
 
 
 

@@ -1,66 +1,87 @@
-import type { ChatSession, Message } from '../types/chat';
+// src/api/chatApi.ts
+import apiClient from './client';
+import type { ChatRoom, ChatMessage } from '../types/chat';
 
-// Mock implementation of chat API
+// API 응답 타입 정의
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error?: { message?: string } | null;
+}
 
-export const streamMemberChatResponse = async (
-  chatId: string,
-  message: string,
-  onChunk: (chunk: string) => void,
-  onComplete?: () => void,
-  token?: string | null,
-  ...args: any[]
-): Promise<void> => {
-  // Simulate streaming response
-  const response = "This is a mock response from the member chat API.";
-  const chunks = response.split(" ");
-  
-  for (const chunk of chunks) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    onChunk(chunk + " ");
-  }
-  if (onComplete) onComplete();
+// =================================================================
+// 1. [회원] 채팅방 목록 조회
+// GET /api/v1/chat-rooms
+// =================================================================
+export const getChatRooms = async (page = 1, size = 10) => {
+  const response = await apiClient.get<ApiResponse<{ chat_rooms: ChatRoom[], total_page: number }>>('/chat-rooms', {
+    params: { page, size }
+  });
+  return response.data;
 };
 
-export const streamGuestChatResponse = async (
-  message: string,
-  onChunk: (chunk: string) => void,
-  onComplete?: () => void,
-  ...args: any[]
-): Promise<void> => {
-  // Simulate streaming response
-  const response = "This is a mock response from the guest chat API.";
-  const chunks = response.split(" ");
-  
-  for (const chunk of chunks) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    onChunk(chunk + " ");
-  }
-  if (onComplete) onComplete();
+// =================================================================
+// 2. [회원] 채팅방 생성 (새 채팅 시작)
+// POST /api/v1/chat-rooms
+// 주의: PDF를 보니 여기서는 질문을 'first_query'라고 보내야 하네요!
+// =================================================================
+export const createChatRoom = async (firstQuery: string) => {
+  const response = await apiClient.post<ApiResponse<{ chat_room_id: number }>>('/chat-rooms', {
+    first_query: firstQuery 
+  });
+  return response.data;
 };
 
-export const getChatRooms = async (token?: string | null): Promise<any[]> => {
-  return [];
+// =================================================================
+// 3. [회원] 채팅방 채팅 전송 (대화 이어가기)
+// POST /api/v1/chat-rooms/{chatRoomId}/chats
+// 주의: 여기서는 질문을 'question'이라고 보내야 합니다!
+// =================================================================
+export const sendMessage = async (chatRoomId: number, message: string) => {
+  const response = await apiClient.post<ApiResponse<{ answer: string }>>(`/chat-rooms/${chatRoomId}/chats`, {
+    question: message
+  });
+  return response.data;
 };
 
-export const createChatRoom = async (token: string | null, title: string): Promise<ChatSession> => {
-  return {
-    id: Date.now().toString(),
-    title,
-    name: title,
-    messages: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
+// =================================================================
+// 4. [회원] 채팅방 채팅내역 조회 (과거 대화 불러오기)
+// GET /api/v1/chat-rooms/{chatRoomId}/chats
+// =================================================================
+export const getChatHistory = async (chatRoomId: number, page = 1, size = 20) => {
+  const response = await apiClient.get<ApiResponse<{ chats: ChatMessage[] }>>(`/chat-rooms/${chatRoomId}/chats`, {
+    params: { page, size }
+  });
+  return response.data;
 };
 
-export const updateChatRoomTitle = async (chatId: string, title: string, token?: string | null): Promise<void> => {
-  console.log(`Updated chat room ${chatId} title to ${title}`);
+// =================================================================
+// 5. [회원] 채팅방 제목 수정
+// PUT /api/v1/chat-rooms/{chatRoomId}
+// =================================================================
+export const updateChatRoomTitle = async (chatRoomId: number, newTitle: string) => {
+  const response = await apiClient.put(`/chat-rooms/${chatRoomId}`, {
+    title: newTitle
+  });
+  return response.data;
 };
 
-export const deleteChatRoom = async (chatId: string, token?: string | null): Promise<void> => {
-  console.log(`Deleted chat room ${chatId}`);
+// =================================================================
+// 6. [회원] 채팅방 삭제
+// DELETE /api/v1/chat-rooms/{chatRoomId}
+// =================================================================
+export const deleteChatRoom = async (chatRoomId: number) => {
+  const response = await apiClient.delete(`/chat-rooms/${chatRoomId}`);
+  return response.data;
 };
 
-export const getChatHistory = async (chatId: string, token?: string | null): Promise<Message[]> => {
-  return [];
+// =================================================================
+// 7. [비회원] 채팅 전송 (로그인 안 했을 때)
+// POST /api/v1/chats
+// =================================================================
+export const sendGuestMessage = async (message: string) => {
+  const response = await apiClient.post<ApiResponse<{ answer: string }>>('/chats', {
+    question: message
+  });
+  return response.data;
 };
