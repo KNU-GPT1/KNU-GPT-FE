@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { streamMemberChatResponse, getChatRooms, createChatRoom, updateChatRoomTitle, deleteChatRoom, getChatHistory } from '../api/chatApi';
 import { saveChatSessions, loadChatSessions, saveActiveChatId, loadActiveChatId } from '../api/chatStorage';
-import { getAuthToken } from '../api/auth';
+import { getAuthToken, logout } from '../api/auth';
 import type { ChatSession, Message } from '../types/chat';
 
 // 사용자 아이콘 컴포넌트
@@ -797,6 +797,17 @@ export default function Chat() {
     setShowUserModal(false);
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/'); 
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // 에러가 발생하더라도 로컬에서는 로그아웃 처리하고 페이지 이동
+      navigate('/');
+    }
+  };
+
   return (
     <div className="flex h-screen bg-[#505050]">
       {/* Sidebar */}
@@ -871,7 +882,7 @@ export default function Chat() {
 
           <div className="p-2">
           <button 
-            onClick={() => navigate('/')}
+            onClick={handleLogout}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors text-red-600"
           >
             <LogOut className="w-4 h-4" />
