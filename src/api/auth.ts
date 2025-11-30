@@ -82,9 +82,10 @@ export async function login({ email, password }: LoginCredentials): Promise<Logi
 //테스트 완료
 export async function sendVerificationCode({ email }: SendCodeParams): Promise<void> {
   
-  // 학교 이메일인지 유효성 검사 로직
-  if (!email.endsWith("@knu.ac.kr")) {
-    throw new Error("경북대학교 이메일만 사용할 수 있습니다.");
+  // 이메일 형식 유효성 검사 로직
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(email)) {
+    throw new Error("올바른 이메일 형식이 아닙니다.");
   }
   
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/email/code`, {
