@@ -399,8 +399,6 @@ export default function GuestPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [guestConversationCount, setGuestConversationCount] = useState(0);
   const [showLimitBanner, setShowLimitBanner] = useState(false);
-  const streamingMessageRef = useRef<string>("");
-  const streamingMessageIdRef = useRef<string | null>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const GUEST_LIMIT = 5; // 비로그인 시 5번 제한
   

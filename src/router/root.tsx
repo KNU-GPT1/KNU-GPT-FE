@@ -7,7 +7,6 @@ const Loading = () => <div>Loading....</div>
 const Chat = lazy(() => import("../pages/chatPage"))
 const Signup = lazy(() => import("../pages/SignupPage"))
 const Login = lazy(() => import("../pages/LoginPage"))
-const DesignTest = lazy(() => import("../pages/DesignTestPage"))
 const GuestPage = lazy(() => import("../pages/guestPage"))
 
 // 로그인 상태에 따라 페이지를 결정하는 컴포넌트
@@ -45,14 +44,6 @@ const router = createBrowserRouter([
     element: (
       <Suspense fallback={<Loading />}>
         <Signup />
-      </Suspense>
-    ),
-  },
-  {
-    path: "/design",
-    element: (
-      <Suspense fallback={<Loading />}>
-        <DesignTest />
       </Suspense>
     ),
   },
