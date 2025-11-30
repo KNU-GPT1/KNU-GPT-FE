@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 
 import { sendVerificationCode, verifyCode, register } from '../api/auth';
@@ -29,6 +30,7 @@ interface FormData {
 }
 
 export default function BasicSignupForm() {
+  const navigate = useNavigate();
   // Map UI enrollmentStatus (Korean) -> backend status enum
   const mapEnrollmentToBackend = (status: FormData['enrollmentStatus']) => {
     switch (status) {
@@ -87,6 +89,10 @@ export default function BasicSignupForm() {
     const s = (remainingSec % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   }, [remainingSec]);
+
+  const handleGoHome = () => {
+    navigate('/');
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -220,7 +226,7 @@ export default function BasicSignupForm() {
       
 
       <div className="w-full h-[72px] px-6 py-4 absolute top-0 left-0 flex items-center gap-2.5 bg-white ">
-        <div className="relative h-7 flex items-center gap-2">
+        <div className="relative h-7 flex items-center gap-2 cursor-pointer" onClick={handleGoHome}>
         <img src="/knu.svg" alt="KNU GPT Logo" className="w-5 h-5 shrink-0" />
           <div className="text-[#222222] text-xl font-normal font-['KNU_TRUTH']">KNU GPT</div>
         </div>

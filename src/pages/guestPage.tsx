@@ -513,7 +513,7 @@ export default function GuestPage() {
   };
 
   const handleSignup = () => {
-    navigate('/login');
+    navigate('/signup');
   };
 
   return (

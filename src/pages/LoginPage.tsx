@@ -1,7 +1,7 @@
 // 로그인 성공 자동로그인 해야함
 import { useState } from "react";
 import { login } from "../api/auth"; 
-import { useNavigate } from "react-router"; // 페이지 이동을 위해 추가
+import { useNavigate } from "react-router-dom"; // 페이지 이동을 위해 추가
 import "./SignupPage.css";
 
 
@@ -11,6 +11,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleGoHome = () => {
+    navigate('/');
+  };
 
   const onSubmit = async () => {
     if (!email || !password) {
@@ -27,7 +31,7 @@ export default function LoginPage() {
       // 로그인 성공 처리: 토큰은 login 함수 내부에서 이미 저장됨
       // 필요시 response 변수에 저장하여 accountId, userRole 등을 사용할 수 있음
       alert(`로그인 성공! 환영합니다.`);
-      navigate("/"); // 메인 페이지로 이동
+      navigate("/chat"); // 메인 페이지로 이동
       
     } catch (e: any) {
       // API 실패 처리
@@ -44,7 +48,7 @@ export default function LoginPage() {
       
 
       <div className="w-full h-[72px] px-6 py-4 absolute top-0 left-0 flex items-center gap-2.5 bg-white shadow-sm">
-        <div className="relative h-7 flex items-center gap-2">
+        <div className="relative h-7 flex items-center gap-2 cursor-pointer" onClick={handleGoHome}>
         <img src="/knu.svg" alt="KNU GPT Logo" className="w-5 h-5 shrink-0" />
           <div className="text-[#222222] text-xl font-normal font-['KNU_TRUTH']">KNU GPT</div>
         </div>

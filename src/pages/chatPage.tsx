@@ -6,6 +6,55 @@ import remarkGfm from 'remark-gfm';
 import { getChatRooms, createChatRoom, sendMessage, getChatHistory, updateChatRoomTitle, deleteChatRoom } from '../api/chatApi';
 import { logout } from '../api/auth';
 import type { ChatRoom, ChatMessage } from '../types/chat';
+import { getUserInfo, updateUserInfo } from '../api/userApi';
+import type { UserInfo as ApiUserInfo } from '../api/userApi';
+
+// API status를 UI 문자열로 변환
+const statusFromApi = (status: ApiUserInfo['status']): { year: string, status: string } => {
+  switch (status) {
+    case 'GRADE1': return { year: '1학년', status: '재학' };
+    case 'GRADE2': return { year: '2학년', status: '재학' };
+    case 'GRADE3': return { year: '3학년', status: '재학' };
+    case 'GRADE4': return { year: '4학년', status: '재학' };
+    case 'BREAK': return { year: '', status: '휴학 중' };
+    case 'EXCEED': return { year: '', status: '초과 학기' };
+    case 'DEFERRED': return { year: '', status: '졸업유예' };
+    case 'GRADUATESCHOOL': return { year: '', status: '졸업생' };
+    case 'STAFF': return { year: '', status: '교직원' };
+    case 'NONE': return { year: '', status: '기타' };
+    default: return { year: '', status: '기타' };
+  }
+};
+
+// UI 문자열을 API status로 변환
+const statusToApi = (year: string, status: string): ApiUserInfo['status'] => {
+  if (status === '재학') {
+    switch (year) {
+      case '1학년': return 'GRADE1';
+      case '2학년': return 'GRADE2';
+      case '3학년': return 'GRADE3';
+      case '4학년': return 'GRADE4';
+    }
+  }
+  switch (status) {
+    case '휴학 중': return 'BREAK';
+    case '초과 학기': return 'EXCEED';
+    case '졸업유예': return 'DEFERRED';
+    case '졸업생': return 'GRADUATESCHOOL';
+    case '교직원': return 'STAFF';
+    default: return 'NONE';
+  }
+};
+
+// UI에서 사용하는 UserInfo 타입
+type UserInfo = {
+  name: string;
+  department: string;
+  year: string; // 1학년, 2학년...
+  status: string; // 재학, 휴학...
+  gpa: string;
+  additionalInfo: string;
+};
 
 // 사용자 아이콘 컴포넌트
 function UserIcon({ className }: { className?: string }) {
@@ -244,16 +293,6 @@ function ChatItem({
 
 // Message와 ChatSession은 types/chat.ts에서 import
 
-type UserInfo = {
-  name: string;
-  department: string;
-  year: string;
-  status: string;
-  gpa: string;
-  maxGpa: string;
-  additionalInfo: string;
-};
-
 export default function Chat() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -296,8 +335,20 @@ export default function Chat() {
   const [editingChatName, setEditingChatName] = useState("");
   const [showUserModal, setShowUserModal] = useState(false);
   const chatAreaRef = useRef<HTMLDivElement>(null);
+
+  // API에서 받아온 원본 데이터
+  const [apiUserInfo, setApiUserInfo] = useState<ApiUserInfo | null>(null);
   
-  // 채팅방 클릭 시: 채팅 내역 로드
+  // UI 표시 및 수정을 위한 임시 상태
+  const [tempUserInfo, setTempUserInfo] = useState<UserInfo>({
+    name: "",
+    department: "",
+    year: "",
+    status: "기타",
+    gpa: "",
+    additionalInfo: "",
+  });
+
   // string | number를 number로 변환하는 헬퍼 함수
   const toNumber = (id: string | number): number => {
     return typeof id === 'string' ? parseInt(id, 10) : id;
@@ -322,27 +373,30 @@ export default function Chat() {
     }
   };
 
-  const [savedUserInfo, setSavedUserInfo] = useState<UserInfo>({
-    name: "",
-    department: "컴퓨터학부",
-    year: "2학년",
-    status: "재학",
-    gpa: "3.6",
-    maxGpa: "4.3",
-    additionalInfo: "",
-  });
+  // 사용자 정보 로드
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const userInfoFromApi = await getUserInfo();
+        setApiUserInfo(userInfoFromApi);
+        
+        const { year, status } = statusFromApi(userInfoFromApi.status);
 
-  const [tempUserInfo, setTempUserInfo] = useState<UserInfo>({
-    name: "",
-    department: "컴퓨터학부",
-    year: "2학년",
-    status: "재학",
-    gpa: "3.6",
-    maxGpa: "4.3",
-    additionalInfo: "",
-  });
+        setTempUserInfo({
+          name: userInfoFromApi.nickname || "",
+          department: userInfoFromApi.major || "",
+          year: year,
+          status: status,
+          gpa: userInfoFromApi.score || "",
+          additionalInfo: userInfoFromApi.introduction || "",
+        });
+      } catch (error) {
+        console.error("Failed to fetch user info:", error);
+      }
+    };
 
-  // currentMessages는 이미 상태로 관리됨
+    loadUserInfo();
+  }, []);
 
   // 메시지가 추가되면 스크롤을 맨 아래로
   useEffect(() => {
@@ -393,13 +447,41 @@ export default function Chat() {
   };
 
   const handleOpenUserModal = () => {
-    setTempUserInfo(savedUserInfo);
+    if (apiUserInfo) {
+      const { year, status } = statusFromApi(apiUserInfo.status);
+      setTempUserInfo({
+        name: apiUserInfo.nickname || "",
+        department: apiUserInfo.major || "",
+        year: year,
+        status: status,
+        gpa: apiUserInfo.score || "",
+        additionalInfo: apiUserInfo.introduction || "",
+      });
+    }
     setShowUserModal(true);
   };
 
-  const handleSaveUserInfo = () => {
-    setSavedUserInfo(tempUserInfo);
-    setShowUserModal(false);
+  const handleSaveUserInfo = async () => {
+    try {
+      const apiStatus = statusToApi(tempUserInfo.year, tempUserInfo.status);
+
+      const updatedInfo: Partial<ApiUserInfo> = {
+        nickname: tempUserInfo.name,
+        major: tempUserInfo.department,
+        score: tempUserInfo.gpa,
+        introduction: tempUserInfo.additionalInfo,
+        status: apiStatus,
+      };
+
+      await updateUserInfo(updatedInfo);
+      setShowUserModal(false);
+      window.location.reload(); // 페이지 새로고침
+      // 필요하다면 부모 컴포넌트의 사용자 정보도 업데이트
+    } catch (error) {
+      console.error("Failed to update user info:", error);
+      // 사용자에게 에러 알림
+      alert("정보 저장에 실패했습니다.");
+    }
   };
 
   const handleCloseUserModal = (e?: React.MouseEvent) => {
@@ -410,7 +492,6 @@ export default function Chat() {
     setShowUserModal(false);
   };
 
-<<<<<<< HEAD
   const handleSendMessage = async (messageText?: string) => {
     const textToSend = messageText || inputMessage;
     if (!textToSend.trim()) return;
@@ -549,10 +630,9 @@ export default function Chat() {
   };
   
   // 채팅방 선택 핸들러
-  // 채팅방을 클릭했을 때만 내역을 불러옴
   const handleSelectChatRoom = async (chatRoomId: string | number) => {
     setActiveChatId(chatRoomId);
-    await loadChatHistory(chatRoomId); // 클릭했을 때만 내역 불러오기!
+    await loadChatHistory(chatRoomId);
   };
 
   const handleNewChat = async () => {
@@ -630,7 +710,7 @@ export default function Chat() {
         ) : chatRooms.length === 0 ? (
           <div className="p-4 text-center text-gray-500">채팅방이 없습니다</div>
         ) : (
-          chatRooms.map((room) => (
+          chatRooms.filter(room => room && room.id).map((room) => (
             <div key={room.id} className="relative">
               <ChatItem
                 label={room.title}
@@ -840,25 +920,19 @@ export default function Chat() {
             
       {/* User Info Modal */}
       {showUserModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
           onClick={handleCloseUserModal}
-          onMouseDown={(e) => {
-            // 모달 내부에서 시작된 마우스 이벤트는 무시
-            if (e.target === e.currentTarget) {
-              handleCloseUserModal(e);
-            }
-          }}
         >
           <div 
             className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto relative" 
             onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">사용자 정보</h2>
               <button
-                onClick={handleCloseUserModal}
+                onClick={() => setShowUserModal(false)}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors"
                 aria-label="닫기"
               >
@@ -913,7 +987,7 @@ export default function Chat() {
                     ))}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    {["휴학", "초과 학기", "졸업 유예"].map((status) => (
+                    {["휴학 중", "초과 학기", "졸업유예"].map((status) => (
                       <label key={status} className="flex items-center space-x-2 cursor-pointer">
                         <input
                           type="radio"
@@ -928,7 +1002,7 @@ export default function Chat() {
                     ))}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    {["대학원", "교직원", "선택 안함"].map((status) => (
+                    {["졸업생", "교직원", "기타"].map((status) => (
                       <label key={status} className="flex items-center space-x-2 cursor-pointer">
                         <input
                           type="radio"
@@ -951,57 +1025,32 @@ export default function Chat() {
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder={tempUserInfo.gpa === '' ? "3.6" : ""}
+                    placeholder="3.6"
                     value={tempUserInfo.gpa}
                     onChange={(e) => {
                       const value = e.target.value;
                       // 숫자와 소수점만 허용
                       if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                        const maxGpa = parseFloat(tempUserInfo.maxGpa) || 4.5;
                         const gpa = parseFloat(value);
                         
-                        // 최대학점보다 큰 값 입력 방지
-                        if (value === '' || (!isNaN(gpa) && gpa >= 0 && gpa <= maxGpa)) {
+                        // 4.5 이하의 값만 허용
+                        if (value === '' || (!isNaN(gpa) && gpa >= 0 && gpa <= 4.5)) {
                           setTempUserInfo({ ...tempUserInfo, gpa: value });
                         }
                       }
                     }}
                     className="w-24 px-3 py-2 border border-gray-300 rounded-md"
                   />
-                  <span className="text-gray-500">/</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder={tempUserInfo.maxGpa === '' ? "4.3" : ""}
-                    value={tempUserInfo.maxGpa}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // 숫자와 소수점만 허용
-                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                        const maxGpa = parseFloat(value) || 4.5;
-                        const currentGpa = parseFloat(tempUserInfo.gpa) || 0;
-                        
-                        // 최대학점 변경 시 현재 학점이 새로운 최대학점보다 크면 조정
-                        if (value === '' || (!isNaN(maxGpa) && maxGpa >= 0)) {
-                          const newGpa = currentGpa > maxGpa ? '' : tempUserInfo.gpa;
-                          setTempUserInfo({ ...tempUserInfo, maxGpa: value, gpa: newGpa });
-                        }
-                      }
-                    }}
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-md"
-                  />
+                  <span className="text-gray-500">/ 4.5</span>
                 </div>
-                {tempUserInfo.gpa && tempUserInfo.maxGpa && parseFloat(tempUserInfo.gpa) > parseFloat(tempUserInfo.maxGpa) && (
-                  <p className="text-xs text-red-500">현재 학점은 최대 학점보다 클 수 없습니다.</p>
-                )}
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="additional" className="block text-sm font-medium">추가 정보</label>
+                <label htmlFor="additional" className="block text-sm font-medium">자기 소개</label>
                 <input
                   id="additional"
                   type="text"
-                  placeholder=""
+                  placeholder="자기 소개 수정"
                   value={tempUserInfo.additionalInfo}
                   onChange={(e) => setTempUserInfo({ ...tempUserInfo, additionalInfo: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
