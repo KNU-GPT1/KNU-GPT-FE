@@ -652,11 +652,16 @@ export default function Chat() {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/'); 
     } catch (error) {
       console.error('Logout failed:', error);
-      // 에러가 발생하더라도 로컬에서는 로그아웃 처리하고 페이지 이동
-      navigate('/');
+    } finally {
+      // 로그아웃 후 항상 홈으로 이동
+      try {
+        navigate('/');
+      } catch (navError) {
+        // navigate가 실패하면 window.location 사용 (Router 컨텍스트가 없을 때)
+        window.location.href = '/';
+      }
     }
   };
   return (
