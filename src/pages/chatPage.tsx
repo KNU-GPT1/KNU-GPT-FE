@@ -598,7 +598,7 @@ export default function Chat() {
       // 로컬 상태 업데이트
       setChatRooms(prev => 
         prev.map(room => 
-          room.id === chatId ? { ...room, title: nameToSave } : room
+          room.chat_room_id === chatId ? { ...room, chat_room_title: nameToSave } : room
         )
       );
       
@@ -619,7 +619,7 @@ export default function Chat() {
       await deleteChatRoom(toNumber(chatId));
       
       // 로컬 상태에서 제거
-      setChatRooms(prev => prev.filter(room => room.id !== chatId));
+      setChatRooms(prev => prev.filter(room => room.chat_room_id !== chatId));
       
       // 현재 활성 채팅방이 삭제된 경우 초기 화면으로
       if (activeChatId === chatId) {
@@ -716,18 +716,18 @@ export default function Chat() {
         ) : chatRooms.length === 0 ? (
           <div className="p-4 text-center text-gray-500">채팅방이 없습니다</div>
         ) : (
-          chatRooms.filter(room => room && room.id).map((room) => (
-            <div key={room.id} className="relative">
+          chatRooms.filter(room => room && room.chat_room_id).map((room) => (
+            <div key={room.chat_room_id} className="relative">
               <ChatItem
-                label={room.title}
-                active={activeChatId === room.id}
-                onRename={() => handleRenameChat(room.id, room.title)}
-                onDelete={() => handleDeleteChat(room.id)}
-                onSelect={() => handleSelectChatRoom(room.id)}
-                isEditing={editingChatId === room.id.toString()}
+                label={room.chat_room_title}
+                active={activeChatId === room.chat_room_id}
+                onRename={() => handleRenameChat(room.chat_room_id, room.chat_room_title)}
+                onDelete={() => handleDeleteChat(room.chat_room_id)}
+                onSelect={() => handleSelectChatRoom(room.chat_room_id)}
+                isEditing={editingChatId === room.chat_room_id.toString()}
                 editingName={editingChatName}
                 onEditingNameChange={setEditingChatName}
-                onSaveRename={() => handleSaveRename(room.id)}
+                onSaveRename={() => handleSaveRename(room.chat_room_id)}
                 onCancelRename={() => {
                   setEditingChatId(null);
                   setEditingChatName("");

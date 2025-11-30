@@ -74,15 +74,9 @@ export interface ChatHistoryResponse {
  */
 export interface ChatRoom {
   /** 채팅방 ID (chat_room_id) */
-  id: string | number;
-  /** 채팅방 제목 (또는 첫 질문) */
-  title: string;
-  /** 마지막 메시지 내용 (선택적) */
-  lastMessage?: string;
-  /** 생성 시간 */
-  createdAt: string | Date;
-  /** 수정 시간 */
-  updatedAt: string | Date;
+  chat_room_id: number;
+  /** 채팅방 제목 (chat_room_title) */
+  chat_room_title: string;
 }
 
 /**
