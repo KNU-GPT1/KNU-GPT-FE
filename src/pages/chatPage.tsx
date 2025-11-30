@@ -334,6 +334,8 @@ export default function Chat() {
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingChatName, setEditingChatName] = useState("");
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const chatAreaRef = useRef<HTMLDivElement>(null);
 
   // API에서 받아온 원본 데이터
@@ -460,6 +462,9 @@ export default function Chat() {
     }
     setShowUserModal(true);
   };
+
+  const handleOpenSettingsModal = () => setShowSettingsModal(true);
+  const handleOpenHelpModal = () => setShowHelpModal(true);
 
   const handleSaveUserInfo = async () => {
     try {
@@ -680,11 +685,12 @@ export default function Chat() {
               <UserIcon className="w-6 h-6" />
               <span className="text-sm font-Pretendard">사용자</span>
             </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+            <button onClick={handleOpenSettingsModal} 
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors">
               <SettingsIcon className="w-6 h-6" />
               <span className="text-sm font-Pretendard">설정</span>
           </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+            <button onClick={handleOpenHelpModal} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors">
               <GuideIcon className="w-6 h-6" />
               <span className="text-sm font-Pretendard">도움말</span>
           </button>
@@ -1062,6 +1068,50 @@ export default function Chat() {
                 className="w-full px-4 py-2 bg-[#DA2127] hover:bg-[#c01d23] text-white rounded-md transition-colors"
               >
                 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowSettingsModal(false)}
+        >
+          <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold mb-6 text-center">설정</h2>
+            <p className="text-center text-gray-600">설정 화면입니다.</p>
+            <div className="mt-8 flex justify-end gap-2">
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowHelpModal(false)}
+        >
+          <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold mb-6 text-center">도움말</h2>
+            <p className="text-center text-gray-600">도움말 화면입니다.</p>
+            <div className="mt-8 flex justify-end gap-2">
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                닫기
               </button>
             </div>
           </div>
